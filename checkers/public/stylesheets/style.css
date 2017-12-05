@@ -23,7 +23,7 @@ td {
   width: 75px;
   max-width: 75px;
   max-height: 75px;
-
+  border: 1px solid black;
 }
 
 table{

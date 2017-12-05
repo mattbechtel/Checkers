@@ -1,6 +1,13 @@
 extends layout
-
+  
 block content
-  p Checkers   
-  input(type='button', onclick="location.href = '/checkers'", value="Play")
+  head
+    script(type = 'text/javascript', src = '/javascripts/checkers.js')
+  
+  body
+    p Checkers   
+    input(type='button', id="create", value="Create Game")
+    input(type='button', id='join', value='Join Game')
+    input(type='text', id="username", placeholder="Username")
+    table#game
     

@@ -1,26 +1,34 @@
 var express = require('express');
-//var socket_io = require('socket.io');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-
+var session = require('express-session'); //sessions
 var index = require('./routes/index');
 var users = require('./routes/users');
-
 var app = express();
 
-//socket_io
-/*
-var io = socket_io();
-app.io = io;
-io.on( "connection", function(socket){
-    console.log( "A user connected" );
-});
+//init sessions
+var sess = {
+  secret: 'user',
+  cookie: {
+    maxAge: 60000,
+    expires: false,
+    httpOnly: true,
+  },
+  saveUninitialized: false,
+  resave: true
+}
 
-var routes = require('./routes/index')(io);
-*/
+if (app.get('env') === 'production') {
+  app.set('trust proxy', 1) // trust first proxy
+  sess.cookie.secure = true // serve secure cookies
+}
+
+app.use(session(sess));
+
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
