@@ -20,7 +20,18 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+//console.log(server);
+/**
+ * socket.io init
+ *
+ */
 
+//var io = app.io
+//io.attach(server);
+var socketApi = require('../modules/socketApi');
+var io = socketApi.io;
+io.attach(server);
+//console.log(socketApi.io);
 /**
  * Listen on provided port, on all network interfaces.
  */
@@ -88,5 +99,3 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-
-module.exports = server;

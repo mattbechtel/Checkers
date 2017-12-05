@@ -1,5 +1,6 @@
 const BOARDSIZE = 8;
 var svgNS = "http://www.w3.org/2000/svg";
+var socket = io();
 
 $(window).on('load', function(){
   var game = new Game();
