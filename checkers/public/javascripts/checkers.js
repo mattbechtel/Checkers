@@ -1,8 +1,9 @@
 const BOARDSIZE = 8;
 var svgNS = "http://www.w3.org/2000/svg";
 var socket = io();
-
-
+const BLACK = 1;
+const RED = 2;
+var thisGame;
 
 
 function Checker(x, y, color){
@@ -20,10 +21,14 @@ function Cell(x, y, color){
   this.hasChecker = 0;
 }
 
-function Game(){
+function Game(player){
   this.checkers = [...Array(BOARDSIZE).keys()].map(i => Array(BOARDSIZE));
   this.cells = [...Array(BOARDSIZE).keys()].map(i => Array(BOARDSIZE));
+  this.player = player;
 }
+
+
+
 
 Game.prototype.initGame = function () {
   this.setupBoard();
@@ -80,6 +85,21 @@ Game.prototype.setupBoard = function(){
     for(var j = 0; j < BOARDSIZE; j++){
       var cell = document.createElement('td');
       cell.id = "row" + i + "col" + j;
+
+      if(i % 2 == 0 && j % 2 != 0){
+        cell.onclick = function(id, y, x, game){
+          return function(){
+            displayPossibleMoves(id, y, x, game);
+          }
+        }(cell.id, i, j, this);
+      } else if(i % 2 != 0 && j % 2 == 0){
+        cell.onclick = function(id, y, x, game){
+          return function(){
+            displayPossibleMoves(id, y, x, game);
+          }
+        }(cell.id, i, j, this);
+      }
+
       row.appendChild(cell);
     }
     $('#game').append(row);
@@ -101,7 +121,7 @@ Game.prototype.renderBoard = function(){
   }
 }
 
-Game.prototype.renderChecker = function(cellID, color, ){
+Game.prototype.renderChecker = function(cellID, color){
   var xmlns = "http://www.w3.org/2000/svg";
   var svg = document.createElementNS(xmlns, "svg");
   var c = document.createElementNS(svgNS,"circle"); //to create a circle. for rectangle use "rectangle"
@@ -116,17 +136,85 @@ Game.prototype.renderChecker = function(cellID, color, ){
 }
 
 
-
 Game.prototype.run = function(){
-  $("#create").remove();
-  $("#join").remove();
-  $("#username").remove();
+  $("#loading").text("");
   this.initGame();
 }
 
-//welcome
-$(document).ready(function(){
 
+function displayPossibleMoves(cellID, checkerY, checkerX, game){
+  //alert(cellID);
+  var moves;
+  if(game.checkers[checkerY][checkerX]){
+    moves = calculatePossibleMoves(checkerY, checkerX, game);
+    //alert(JSON.stringify(moves));
+    for(var i = 0; i < moves.length; i++){
+      var cellID = "row" + moves[i].y + "col" + moves[i].x;
+      var cell = document.getElementById(cellID);
+      if(game.player == BLACK){
+        cell.style.backgroundColor = "black";
+      } else if(game.player == RED){
+        cell.style.backgroundColor = "red";
+      }
+      cell.onclick = function(cellID, moves, i, checker){
+        return function(){
+          makeMove(cellID, moves, i, checker);
+        }
+      }(cellID, moves, i, game.checkers[checkerY][checkerX]);
+    }
+  }
+}
+
+function calculatePossibleMoves(checkerY, checkerX, game){
+  var possibleMoves = [];
+
+  if(game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing){
+    for(var i = -1; i < 2; i+=2){
+      if(!game.checkers[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE){
+        possibleMoves.push({y: checkerY + 1, x: checkerX + i});
+      } else if(game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]){
+        possibleMoves.push({y: checkerY + 2, x: checkerX + 2*i});
+      }
+    }
+  } else if(game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing){
+    for(var i = -1; i < 2; i+=2){
+      if(!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE){
+        possibleMoves.push({y: checkerY - 1, x: checkerX + i});
+      } else if(game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0){
+        possibleMoves.push({y: checkerY - 2, x: checkerX + 2*i});
+      }
+    }
+  } else if(game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing){
+
+  } else if(game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing){
+
+  } else{
+    if(game.player == BLACK){
+      alert("Choose a black checker")
+    } else if(game.player == RED){
+      alert("Choose a red checker");
+    }
+  }
+
+  return possibleMoves;
+}
+
+
+function makeMove(cellID, moves, i, checker){
+  for(var j = 0; j < moves.length; j++){
+    $("#row" + moves[j].y + "col" + moves[j].x).css('background-color', "grey");
+  }
+  //alert(checker.y + " "  + checker.x + " made move to " + moves[i].y + " " + moves[i].x);
+  socket.emit('makeMove', checker, moves[i]);
+}
+
+
+
+
+
+
+//SOCKET REQUESTS (matchmaking)
+$(document).ready(function(){
   $('#create').click(function(){
     sendGame();
   });
@@ -136,16 +224,6 @@ $(document).ready(function(){
   });
 });
 
-socket.on('messageFromOpponent', function(msg){
-  alert(msg);
-})
-
-
-socket.on('gameCreated', function (data) {
-    console.log("Game Created! ID is: " + data.gameId)
-    console.log(data.username + ' created Game: ' + data.gameId);
-    //alert("Game Created! ID is: "+ JSON.stringify(data));
-  });
 
 function sendGame(){
   if($("#username").val() != ""){
@@ -160,25 +238,58 @@ function joinGame(){
   socket.emit('joinGame', $('#username').val());
 };
 
-socket.on('joinSuccess', function (gameId) {
+function leaveGame(){
+  socket.emit('leaveGame');
+};
+
+
+socket.on('messageFromOpponent', function(msg){
+  alert(msg);
+});
+
+
+socket.on('gameCreated', function (data) {
+  console.log("Game Created! ID is: " + data.gameId)
+  console.log(data.username + ' created Game: ' + data.gameId);
+  //alert("Game Created! ID is: "+ JSON.stringify(data));
+  $("#create").remove();
+  $("#join").remove();
+  $("#username").remove();
+  $("#loading").text("Waiting for oppenent");
+});
+
+
+socket.on('joinSuccess', function (gameId, player) {
   console.log('Joining the following game: ' + gameId);
-  var game = new Game();
-  game.run();
+  $("#create").remove();
+  $("#join").remove();
+  $("#username").remove();
+  thisGame = new Game(player);
+  thisGame.run();
   socket.emit('messageToOpponent', "FROM OPPONENT");
 });
 
 
 //Response from Server on existing User found in a game
 socket.on('alreadyJoined', function (username){
-  console.log('You are already in an Existing Game: ' + username);
+  console.log('You are already in an Existing Game ' + username + "!");
   alert("Username is already active, try another");
 });
 
 
-function leaveGame(){
-socket.emit('leaveGame');
-};
-
 socket.on('leftGame', function (data) {
   console.log('Leaving Game ' + data.gameId);
+});
+
+
+socket.on('madeMove', function(game){
+  console.log(JSON.stringify(game));
+  $("#game").remove();
+  var board = document.createElement('table');
+  board.id = "game";
+  $("#gameDiv").append(board);
+  thisGame.checkers = game.checkers;
+  thisGame.cells = game.cells;
+  thisGame.setupBoard();
+  thisGame.renderBoard();
 });

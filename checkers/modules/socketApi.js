@@ -3,30 +3,25 @@ var router = require('../routes/index');
 var io = socket_io();
 var socketApi = {};
 var gc = require('../middleware/game');
+var Player = require('../middleware/player');
 var session = require('express-session');
 
-var noGamesFound = true;
-var sockets = [];
 socketApi.io = io;
-
 
 io.on('connection', function(socket){
   console.log('A user connected');
-  //console.log(socket.id);
-
 
   socket.on('messageToOpponent', function(msg){
-    console.log(msg);
-    console.log(this.gameId);
-    console.log(this.id);
-    console.log(sockets.length);
-    for(var i = 0; i < sockets.length; i++){
-      console.log("IDS " + sockets[i].id);
-      if(sockets[i].gameId == this.gameId && this.id != sockets[i].id){
-        io.to(sockets[i].id).emit('messageFromOpponent', msg);
+    //console.log(this.gameInfo.playerOne);
+    //console.log(this.gameInfo.playerTwo);
+
+    if(this.gameInfo){
+      if(this.gameInfo.playerOne.socketID != this.id){
+        io.to(this.gameInfo.playerOne.socketID).emit('messageFromOpponenet', msg);
+      } else if(this.gameInfo.playerOne.socketID == this.id){
+        io.to(this.gameInfo.playerTwo.socketID).emit('messageFromOpponent', msg);
       }
     }
-
   });
 
   socket.on('game', function(game){
@@ -37,55 +32,75 @@ io.on('connection', function(socket){
   //request to make game
   socket.on('makeGame', function (username) {
     console.log(username);
-    //authenticate username;
-    noGamesFound = true;
-    for(var i = 0; i < gc.gameList.length; i++){
-      if((gc.gameList[i]['playerOne'] == username || gc.gameList[i]['playerTwo'] == username)){
-        noGamesFound = false;
-        console.log("User already has game");
-        io.emit('alreadyJoined', username);
-      }
-    }
 
-    if(noGamesFound == true){
-      gc.addGame(this, username);
+    if(!alreadyInGame(this)){
+      var player = new Player(username, 1, this.id);
+      gc.addGame(this, player);
       var gameId = gc.gameList[gc.gameList.length - 1].id
-      this.gameId = gameId;
-      sockets.push(this);
-      io.emit('gameCreated', {
+      this.gameInfo = gc.gameList[gc.gameList.length - 1];
+      console.log(this.gameInfo);
+      this.username = username;
+      this.playerNum = 1;
+      io.to(this.gameInfo.playerOne.socketID).emit('gameCreated', {
         username: username,
         gameId: gameId
       });
     }
-    //console.log(sockets);
-    console.log(gc);
   });
 
 
-
-  //request to join gaem
+  //request to join game
   socket.on('joinGame', function(username){
     console.log(username + " wants to join a game");
-    var alreadyInGame = false;
-    for(var i = 0; i < gc.gameList.length; i++){
-      if(gc.gameList[i]['playerOne'] == username || gc.gameList[i]['playerTwo'] == username){
-        alreadyInGame = true;
-        console.log("User already has game");
-        io.emit('alreadyJoined', username);
+    if(!alreadyInGame(this)){
+      var player = new Player(username, null, this.id);
+      console.log("Adding " + username + " to game");
+      this.gameInfo = gc.gameSeeker(this, player);
+      this.username = username;
+      var gameId = this.gameInfo.id;
+
+      if(this.gameInfo.playerTwo && this.gameInfo.playerTwo.socketID == this.id){
+        console.log("Player 2");
+        this.playerNum = 2;
+        io.to(this.gameInfo.playerTwo.socketID).emit('joinSuccess', gameId, 2);
+        io.to(this.gameInfo.playerOne.socketID).emit('joinSuccess', gameId, 1);
+      } else if(this.gameInfo.playerTwo && this.gameInfo.playerOne.socketID == this.id){
+        console.log("Player 1");
+        this.playerNum = 1;
+        io.to(this.gameInfo.playerOne.socketID).emit('joinSuccess', gameId, 1);
+      } else if(this.gameInfo.playerOne){
+        io.to(this.gameInfo.playerOne.socketID).emit('gameCreated', {
+          username: username,
+          gameId: gameId
+        });
       }
+      console.log(username + " joined game: " + socket.gameInfo.id);
+      console.log(JSON.stringify(this.gameInfo));
+      console.log(this.playerNum, this.username);
     }
 
-    if(!alreadyInGame){
-      console.log("Add " + username + " to game");
-      var gameId = gc.gameSeeker(this, username);
-      this.gameId = gameId;
-      io.emit('joinSuccess', gameId);
-      console.log("JOIN SUCCESS");
-      console.log(this.gameId);
-    }
+
+    //request to make moves
+
   });
 
-  console.log(gc);
+  socket.on('makeMove', function(checker, move){
+    console.log(this.id);
+    console.log(this.playerNum + " requested move");
+    this.gameInfo.Game.validateMove(this.playerNum, checker, move.y, move.x);
+    io.to(this.gameInfo.playerTwo.socketID).emit('madeMove', this.gameInfo.Game);
+    io.to(this.gameInfo.playerOne.socketID).emit('madeMove', this.gameInfo.Game);
+  });
+
+  function alreadyInGame(socket){
+    if(socket.gameInfo){
+      console.log("User already has game");
+      io.emit('alreadyJoined', socket.username);
+      return true;
+    }
+    return false;
+  }
+  //console.log(gc);
 });
 
 
