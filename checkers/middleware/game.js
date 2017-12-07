@@ -76,48 +76,89 @@ Game.prototype.initGame = function () {
 };
 
 
+Game.prototype.executeMove = function(playerNum, checker, newY, newX){
+  var normalMove = (Math.abs(checker.x - newX) == 1 && this.cells[newX][newY] && this.cells[newY][newX].color == "grey" && !this.checkers[newY][newX]);
+  var skipMove = (Math.abs(checker.x - newX) == 2 && this.cells[newX][newY] && this.cells[newY][newX].color == "grey" && !this.checkers[newY][newX]);
 
-//in progress
-Game.prototype.validateMove = function(playerNum, checker, newY, newX){
-  var success = 0;
-  if(playerNum == BLACK && checker.y - newY < 0){
-    success = this.executeMove(playerNum, checker, newY, newX, "black");
-  } else if(playerNum == RED && checker.y - newY > 0){
-    success = this.executeMove(playerNum, checker, newY, newX, "red");
-  }
-  console.log(success);
-  //console.log(JSON.stringify(this));
-}
+  if(normalMove){
+    var validMoveBlack = ((checker.color == "black" && checker.y - newY < 0) || checker.isKing);
+    var validMoveRed = ((checker.color == "red" && checker.y - newY > 0) || checker.isKing);
 
+    if(validMoveBlack || validMoveRed){
+      this.checkers[checker.y][checker.x] = null;
+      this.cells[checker.y][checker.x].hasChecker = 0;
+      checker.y = newY;
+      checker.x = newX;
+      this.checkers[newY][newX] = checker;
+      this.cells[newY][newX].hasChecker = 1;
+      if((this.cells[newY][newX].y == BOARDSIZE - 1 && checker.color == "black") || (this.cells[newY][newX].y == 0 && checker.color == "red")){
+        this.checkers[newY][newX].isKing = 1;
+      }
+    }
 
-Game.prototype.executeMove = function(playerNum, checker, newY, newX, color){
-  if(Math.abs(checker.x - newX) == 1 &&  this.cells[newY][newX].color == "grey" && !this.checkers[newY][newX]){
-    this.checkers[checker.y][checker.x] = null;
-    this.cells[checker.y][checker.x].hasChecker = 0;
-    checker.y = newY;
-    checker.x = newX;
-    this.checkers[newY][newX] = checker;
-    this.cells[newY][newX].hasChecker = 1;
-    return 1;
-  } else if(Math.abs(checker.x - newX) == 2 && this.cells[newY][newX].color == "grey" && !this.checkers[newY][newX]){
+  } else if(skipMove){
     var skippedY = null;
     var skippedX = null;
-    if(color == "black"){
-      if(checker.x - newX < 0 && this.checkers[checker.y + 1][checker.x + 1]){
+    if(checker.color == "black" && !checker.isKing){
+      var skipRight = (checker.y - newY < 0 && checker.x - newX < 0 && this.checkers[checker.y + 1][checker.x + 1] && this.checkers[checker.y + 1][checker.x + 1].color == "red");
+      var skipLeft = (checker.y - newY < 0 && checker.x - newX > 0 && this.checkers[checker.y + 1][checker.x - 1] && this.checkers[checker.y + 1][checker.x - 1].color == "red");
+
+      if(skipRight){
         skippedY = checker.y + 1;
         skippedX = checker.x + 1;
-      } else if(checker.x - newX > 0 && this.checkers[checker.y + 1][checker.x - 1]){
+      } else if(skipLeft){
         skippedY = checker.y + 1;
         skippedX = checker.x - 1;
       }
-    } else if(color == "red"){
-      if(checker.x - newX < 0 && this.checkers[checker.y - 1][checker.x + 1]){
+    } else if(checker.color == "red" && !checker.isKing){
+      var skipRight = (checker.y - newY > 0 && checker.x - newX < 0 && this.checkers[checker.y - 1][checker.x + 1] && this.checkers[checker.y - 1][checker.x + 1].color == "black")
+      var skipLeft = (checker.y - newY > 0 && checker.x - newX > 0 && this.checkers[checker.y - 1][checker.x - 1] && this.checkers[checker.y - 1][checker.x - 1].color == "black")
+
+      if(skipRight){
         skippedY = checker.y - 1;
         skippedX = checker.x + 1;
-      } else if(checker.x - newX > 0 && this.checkers[checker.y - 1][checker.x - 1]){
+      } else if(skipLeft){
         skippedY = checker.y - 1;
         skippedX = checker.x - 1;
       }
+    } else if(checker.color == "black" && checker.isKing){
+        var skipDownRight = (checker.x - newX < 0 && this.checkers[checker.y + 1][checker.x + 1] && this.checkers[checker.y + 1][checker.x + 1].color == "red");
+        var skipDownLeft = (checker.x - newX > 0 && this.checkers[checker.y + 1][checker.x - 1] && this.checkers[checker.y + 1][checker.x - 1].color == "red");
+        var skipUpRight = (checker.x - newX < 0 && this.checkers[checker.y - 1][checker.x + 1] && this.checkers[checker.y - 1][checker.x + 1].color == "red");
+        var skipUpLeft = (checker.x - newX > 0 && this.checkers[checker.y - 1][checker.x - 1] && this.checkers[checker.y - 1][checker.x - 1].color == "red");
+
+        if(skipDownRight){
+          skippedY = checker.y + 1;
+          skippedX = checker.x + 1;
+        } else if(skipDownLeft){
+          skippedY = checker.y + 1;
+          skippedX = checker.x - 1;
+        } else if(skipUpRight){
+          skippedY = checker.y - 1;
+          skippedX = checker.x + 1;
+        } else if(skipUpLeft){
+          skippedY = checker.y - 1;
+          skippedX = checker.x - 1;
+        }
+    } else if(checker.color == "red" && checker.isKing){
+        var skipDownRight = (checker.x - newX < 0 && this.checkers[checker.y + 1][checker.x + 1] && this.checkers[checker.y + 1][checker.x + 1].color == "black");
+        var skipDownLeft = (checker.x - newX > 0 && this.checkers[checker.y + 1][checker.x - 1] && this.checkers[checker.y + 1][checker.x - 1].color == "black");
+        var skipUpRight = (checker.x - newX < 0 && this.checkers[checker.y - 1][checker.x + 1] && this.checkers[checker.y - 1][checker.x + 1].color == "black");
+        var skipUpLeft = (checker.x - newX > 0 && this.checkers[checker.y - 1][checker.x - 1] && this.checkers[checker.y - 1][checker.x - 1].color == "black");
+
+        if(skipDownRight){
+          skippedY = checker.y + 1;
+          skippedX = checker.x + 1;
+        } else if(skipDownLeft){
+          skippedY = checker.y + 1;
+          skippedX = checker.x - 1;
+        } else if(skipUpRight){
+          skippedY = checker.y - 1;
+          skippedX = checker.x + 1;
+        } else if(skipUpLeft){
+          skippedY = checker.y - 1;
+          skippedX = checker.x - 1;
+        }
     }
 
     if(skippedX && skippedY){
@@ -129,10 +170,39 @@ Game.prototype.executeMove = function(playerNum, checker, newY, newX, color){
       checker.x = newX;
       this.checkers[newY][newX] = checker;
       this.cells[newY][newX].hasChecker = 1;
-      return 1;
+      if((this.cells[newY][newX].y == BOARDSIZE - 1 && checker.color == "black") || (this.cells[newY][newX].y == 0 && checker.color == "red")){
+        this.checkers[newY][newX].isKing = 1;
+      }
     }
   }
 }
+
+
+Game.prototype.checkWin = function(){
+  var blackCount = 0;
+  var redCount = 0;
+  for(var i = 0; i < BOARDSIZE; i++){
+    for(var j = 0; j < BOARDSIZE; j++){
+      if(this.checkers[i][j] && this.checkers[i][j].color == "black"){
+        blackCount++;
+      } else if(this.checkers[i][j] && this.checkers[i][j].color == "red"){
+        redCount++;
+      }
+    }
+  }
+
+  if(blackCount != 0 && redCount == 0){
+    return 1;
+    console.log("Player One Wins");
+  } else if(redCount != 0 && blackCount == 0){
+    return 2;
+    console.log("Player Two Wins");
+  } else{
+    return 0;
+  }
+
+}
+
 
 function GameCollection(){
   this.totalGameCount = 0;
@@ -144,6 +214,7 @@ function GameInfo(){
   this.playerOne = null;
   this.playerTwo = null;
   this.Game = null;
+  this.turn = null;
 }
 
 GameCollection.prototype.addGame = function(socket, player){
@@ -175,7 +246,7 @@ GameCollection.prototype.gameSeeker = function(socket, player){
     this.addGame(socket, player);
   } else {
     player.playerNum = 2;
-    gameNum = openMatches.pop();
+    gameNum = openMatches[0];
     if (this.gameList[gameNum]['playerTwo'] == null){
         this.gameList[gameNum]['playerTwo'] = player;
         console.log(player.username + " has been added to: " + this.gameList[gameNum].id);

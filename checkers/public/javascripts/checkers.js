@@ -28,8 +28,6 @@ function Game(player){
 }
 
 
-
-
 Game.prototype.initGame = function () {
   this.setupBoard();
   var checkerColor = "grey";
@@ -73,7 +71,6 @@ Game.prototype.initGame = function () {
       }
     }
   }
-  console.log(this.checkers, this.cells);
   this.renderBoard();
 };
 
@@ -113,7 +110,7 @@ Game.prototype.renderBoard = function(){
       if(this.cells[i][j].color == "grey"){
         var cellID = "#row" + i + "col" + j;
         if(this.cells[i][j].hasChecker){
-          this.renderChecker(cellID, this.checkers[i][j].color, this.checker[i][j].isKing);
+          this.renderChecker(cellID, this.checkers[i][j].color, this.checkers[i][j].isKing);
         }
         $(cellID).css('background-color', this.cells[i][j].color);
       }
@@ -121,10 +118,11 @@ Game.prototype.renderBoard = function(){
   }
 }
 
+
 Game.prototype.renderChecker = function(cellID, color, isKing){
   var xmlns = "http://www.w3.org/2000/svg";
   var svg = document.createElementNS(xmlns, "svg");
-  var c = document.createElementNS(svgNS,"circle"); //to create a circle. for rectangle use "rectangle"
+  var c = document.createElementNS(svgNS,"circle"); //to create a circle. for rectangle use "rectangle
   if(!isKing){
     c.setAttributeNS(null,"id", cellID + "circle");
     c.setAttributeNS(null,"cx", "50%");
@@ -132,17 +130,10 @@ Game.prototype.renderChecker = function(cellID, color, isKing){
     c.setAttributeNS(null,"r", "45%");
     c.setAttributeNS(null,"fill",color);
     c.setAttributeNS(null,"stroke","none");
+    svg.appendChild(c);
   } else{
-    c.textContent("K");
-    c.setAttributeNS(null,"id","c");
-    c.setAttributeNS(null,"cx", "50%");
-    c.setAttributeNS(null,"cy", "50%");
-    c.setAttributeNS(null,"r", "45%");
-    c.setAttributeNS(null,"fill",color);
-    c.setAttributeNS(null,"stroke",6);
+    svg.innerHTML ='<g><circle id="#row0col7circle" cx="50%" cy="50%" r="45%" fill="'+color+'" stroke="6"></circle><text fill="white" text-anchor="middle" x="50%" y="65%">K</text></g>';
   }
-
-  svg.appendChild(c);
   $(cellID).append(svg);
 }
 
@@ -154,11 +145,9 @@ Game.prototype.run = function(){
 
 
 function displayPossibleMoves(cellID, checkerY, checkerX, game){
-  //alert(cellID);
   var moves;
   if(game.checkers[checkerY][checkerX]){
     moves = calculatePossibleMoves(checkerY, checkerX, game);
-    //alert(JSON.stringify(moves));
     for(var i = 0; i < moves.length; i++){
       var cellID = "row" + moves[i].y + "col" + moves[i].x;
       var cell = document.getElementById(cellID);
@@ -181,12 +170,12 @@ function calculatePossibleMoves(checkerY, checkerX, game){
   var black = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing);
   var red = (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing);
   var blackKing = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && game.checkers[checkerY][checkerX].isKing);
-  var redKing = (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing);
+  var redKing = (game.player == RED && game.checkers[checkerY][checkerX] &&  game.checkers[checkerY][checkerX].color == "red" && game.checkers[checkerY][checkerX].isKing);
 
   if(black){ //black, not a king
     for(var i = -1; i < 2; i+=2){
-      var regularMove = (!game.checkers[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
-      var skipMove = (game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]);
+      var regularMove = (!game.checkers[checkerY + 1][checkerX + i]  && game.cells[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+      var skipMove = (!regularMove && checkerY + 2 < BOARDSIZE && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]);
 
       if(regularMove){
         possibleMoves.push({y: checkerY + 1, x: checkerX + i});
@@ -196,8 +185,8 @@ function calculatePossibleMoves(checkerY, checkerX, game){
     }
   } else if(red){ //red, not a king
     for(var i = -1; i < 2; i+=2){
-      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
-      var skipMove = (game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0);
+      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && game.cells[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+      var skipMove = (!regularMove&& checkerY - 2 >= 0 && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i]);
 
       if(regularMove){
         possibleMoves.push({y: checkerY - 1, x: checkerX + i});
@@ -206,21 +195,12 @@ function calculatePossibleMoves(checkerY, checkerX, game){
       }
     }
   } else if(blackKing){ //black, a king
-    for(var i = -1; i < 2; i+=2){
-      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
-      var skipMove = (game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "red" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0);
-
-      if(regularMove){
-        possibleMoves.push({y: checkerY - 1, x: checkerX + i});
-      } else if(skipMove){
-        possibleMoves.push({y: checkerY - 2, x: checkerX + 2*i});
-      }
-    }
+    possibleMoves = possibleKingMoves(checkerY, checkerX, game, "red");
   } else if(redKing){ //red, a king
-
+    possibleMoves = possibleKingMoves(checkerY, checkerX, game, "black");
   } else{
     if(game.player == BLACK){
-      alert("Choose a black checker")
+      alert("Choose a black checker");
     } else if(game.player == RED){
       alert("Choose a red checker");
     }
@@ -230,11 +210,28 @@ function calculatePossibleMoves(checkerY, checkerX, game){
 }
 
 
+function possibleKingMoves(checkerY, checkerX, game, color){
+  var possibleMoves = [];
+  for(var i = -1; i < 2; i+=2){
+    for(var j = -1; j < 2; j+=2){
+      var regularMove = (checkerY + j >= 0 && checkerY + j < BOARDSIZE && checkerX + i >= 0 && checkerX + i < BOARDSIZE && game.checkers[checkerY + j] && !game.checkers[checkerY + j][checkerX + i] );
+      var skipMove = (!regularMove && checkerY + 2*j >= 0 && checkerY + 2*j < BOARDSIZE && checkerX + 2*i >= 0 && checkerX + 2*i < BOARDSIZE  &&
+                      game.cells[checkerY + 2*j][checkerX + 2*i] && game.checkers[checkerY + j][checkerX + i] && game.checkers[checkerY + j][checkerX + i].color == color && !game.checkers[checkerY + 2*j][checkerX + 2*i]);
+
+      if(regularMove){
+        possibleMoves.push({y: checkerY + j, x: checkerX + i});
+      } else if(skipMove){
+        possibleMoves.push({y: checkerY + 2*j, x: checkerX + 2*i});
+      }
+    }
+  }
+  return possibleMoves;
+}
+
 function makeMove(cellID, moves, i, checker){
   for(var j = 0; j < moves.length; j++){
     $("#row" + moves[j].y + "col" + moves[j].x).css('background-color', "grey");
   }
-  //alert(checker.y + " "  + checker.x + " made move to " + moves[i].y + " " + moves[i].x);
   socket.emit('makeMove', checker, moves[i]);
 }
 
@@ -265,38 +262,68 @@ function sendGame(){
 
 
 function joinGame(){
-  socket.emit('joinGame', $('#username').val());
+  if($("#username").val() != ""){
+    socket.emit('joinGame', $('#username').val());
+  } else{
+    alert("Please enter a username");
+  }
 };
 
 function leaveGame(){
   socket.emit('leaveGame');
 };
 
+function checkWin(game){
+  var blackCount = 0;
+  var redCount = 0;
+  for(var i = 0; i < BOARDSIZE; i++){
+    for(var j = 0; j < BOARDSIZE; j++){
+      if(game.checkers[i][j] && game.checkers[i][j].color == "black"){
+        blackCount++;
+      } else if(game.checkers[i][j] && game.checkers[i][j].color == "red"){
+        redCount++;
+      }
+    }
+  }
+  if(blackCount == 0 || redCount == 0){
+    return 1;
+  } else{
+    return 0;
+  }
+}
 
-socket.on('messageFromOpponent', function(msg){
-  alert(msg);
-});
+
+function printTurn(turn){
+  if(thisGame){
+    if(turn == thisGame.player){
+      $("#turn").text("Your Turn");
+    } else{
+      $("#turn").text("Opponent's Turn");
+    }
+  }
+}
 
 
-socket.on('gameCreated', function (data) {
+socket.on('gameCreated', function (data, turn) {
   console.log("Game Created! ID is: " + data.gameId)
   console.log(data.username + ' created Game: ' + data.gameId);
   //alert("Game Created! ID is: "+ JSON.stringify(data));
   $("#create").remove();
   $("#join").remove();
   $("#username").remove();
-  $("#loading").text("Waiting for oppenent");
+  $("#loading").text("Waiting for oppenent...");
+  printTurn(turn);
 });
 
 
-socket.on('joinSuccess', function (gameId, player) {
+socket.on('joinSuccess', function (gameId, player, turn) {
   console.log('Joining the following game: ' + gameId);
   $("#create").remove();
   $("#join").remove();
   $("#username").remove();
   thisGame = new Game(player);
   thisGame.run();
-  socket.emit('messageToOpponent', "FROM OPPONENT");
+  printTurn(turn);
 });
 
 
@@ -308,12 +335,12 @@ socket.on('alreadyJoined', function (username){
 
 
 socket.on('leftGame', function (data) {
-  console.log('Leaving Game ' + data.gameId);
+  alert("Opponent left match");
+  location.reload();
 });
 
 
-socket.on('madeMove', function(game){
-  console.log(JSON.stringify(game));
+socket.on('madeMove', function(game, turn){
   $("#game").remove();
   var board = document.createElement('table');
   board.id = "game";
@@ -322,4 +349,28 @@ socket.on('madeMove', function(game){
   thisGame.cells = game.cells;
   thisGame.setupBoard();
   thisGame.renderBoard();
+  printTurn(turn);
+  if(checkWin(game)){
+    socket.emit('win');
+  }
+});
+
+
+socket.on('waitingForOpponentMove', function(){
+  alert("Not your move, wait for opponent");
+});
+
+
+socket.on('youWin', function(){
+  alert("YOU WIN");
+});
+
+
+socket.on('youLose', function(){
+  alert("YOU LOST :(");
+});
+
+
+socket.on('gameOver', function(){
+  location.reload();
 });
