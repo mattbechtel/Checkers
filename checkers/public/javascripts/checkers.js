@@ -113,7 +113,7 @@ Game.prototype.renderBoard = function(){
       if(this.cells[i][j].color == "grey"){
         var cellID = "#row" + i + "col" + j;
         if(this.cells[i][j].hasChecker){
-          this.renderChecker(cellID, this.checkers[i][j].color);
+          this.renderChecker(cellID, this.checkers[i][j].color, this.checker[i][j].isKing);
         }
         $(cellID).css('background-color', this.cells[i][j].color);
       }
@@ -121,16 +121,27 @@ Game.prototype.renderBoard = function(){
   }
 }
 
-Game.prototype.renderChecker = function(cellID, color){
+Game.prototype.renderChecker = function(cellID, color, isKing){
   var xmlns = "http://www.w3.org/2000/svg";
   var svg = document.createElementNS(xmlns, "svg");
   var c = document.createElementNS(svgNS,"circle"); //to create a circle. for rectangle use "rectangle"
-  c.setAttributeNS(null,"id","c");
-  c.setAttributeNS(null,"cx", "50%");
-  c.setAttributeNS(null,"cy", "50%");
-  c.setAttributeNS(null,"r", "45%");
-  c.setAttributeNS(null,"fill",color);
-  c.setAttributeNS(null,"stroke","none");
+  if(!isKing){
+    c.setAttributeNS(null,"id", cellID + "circle");
+    c.setAttributeNS(null,"cx", "50%");
+    c.setAttributeNS(null,"cy", "50%");
+    c.setAttributeNS(null,"r", "45%");
+    c.setAttributeNS(null,"fill",color);
+    c.setAttributeNS(null,"stroke","none");
+  } else{
+    c.textContent("K");
+    c.setAttributeNS(null,"id","c");
+    c.setAttributeNS(null,"cx", "50%");
+    c.setAttributeNS(null,"cy", "50%");
+    c.setAttributeNS(null,"r", "45%");
+    c.setAttributeNS(null,"fill",color);
+    c.setAttributeNS(null,"stroke",6);
+  }
+
   svg.appendChild(c);
   $(cellID).append(svg);
 }
@@ -167,26 +178,45 @@ function displayPossibleMoves(cellID, checkerY, checkerX, game){
 
 function calculatePossibleMoves(checkerY, checkerX, game){
   var possibleMoves = [];
+  var black = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing);
+  var red = (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing);
+  var blackKing = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && game.checkers[checkerY][checkerX].isKing);
+  var redKing = (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing);
 
-  if(game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing){
+  if(black){ //black, not a king
     for(var i = -1; i < 2; i+=2){
-      if(!game.checkers[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE){
+      var regularMove = (!game.checkers[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+      var skipMove = (game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]);
+
+      if(regularMove){
         possibleMoves.push({y: checkerY + 1, x: checkerX + i});
-      } else if(game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]){
+      } else if(skipMove){
         possibleMoves.push({y: checkerY + 2, x: checkerX + 2*i});
       }
     }
-  } else if(game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing){
+  } else if(red){ //red, not a king
     for(var i = -1; i < 2; i+=2){
-      if(!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE){
+      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+      var skipMove = (game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0);
+
+      if(regularMove){
         possibleMoves.push({y: checkerY - 1, x: checkerX + i});
-      } else if(game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0){
+      } else if(skipMove){
         possibleMoves.push({y: checkerY - 2, x: checkerX + 2*i});
       }
     }
-  } else if(game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing){
+  } else if(blackKing){ //black, a king
+    for(var i = -1; i < 2; i+=2){
+      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+      var skipMove = (game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "red" && !game.checkers[checkerY - 2][checkerX + 2*i] && checkerX + 2*i >= 0);
 
-  } else if(game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].isKing){
+      if(regularMove){
+        possibleMoves.push({y: checkerY - 1, x: checkerX + i});
+      } else if(skipMove){
+        possibleMoves.push({y: checkerY - 2, x: checkerX + 2*i});
+      }
+    }
+  } else if(redKing){ //red, a king
 
   } else{
     if(game.player == BLACK){

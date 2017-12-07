@@ -38,7 +38,6 @@ io.on('connection', function(socket){
       gc.addGame(this, player);
       var gameId = gc.gameList[gc.gameList.length - 1].id
       this.gameInfo = gc.gameList[gc.gameList.length - 1];
-      console.log(this.gameInfo);
       this.username = username;
       this.playerNum = 1;
       io.to(this.gameInfo.playerOne.socketID).emit('gameCreated', {
@@ -75,8 +74,6 @@ io.on('connection', function(socket){
         });
       }
       console.log(username + " joined game: " + socket.gameInfo.id);
-      console.log(JSON.stringify(this.gameInfo));
-      console.log(this.playerNum, this.username);
     }
 
 
@@ -85,8 +82,7 @@ io.on('connection', function(socket){
   });
 
   socket.on('makeMove', function(checker, move){
-    console.log(this.id);
-    console.log(this.playerNum + " requested move");
+    console.log("Player " + this.playerNum + ", " + this.username + " requested move");
     this.gameInfo.Game.validateMove(this.playerNum, checker, move.y, move.x);
     io.to(this.gameInfo.playerTwo.socketID).emit('madeMove', this.gameInfo.Game);
     io.to(this.gameInfo.playerOne.socketID).emit('madeMove', this.gameInfo.Game);
