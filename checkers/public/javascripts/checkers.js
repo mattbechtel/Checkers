@@ -5,7 +5,13 @@ const BLACK = 1;
 const RED = 2;
 var thisGame;
 
-
+/**
+ * Checker
+ * @param       {int} x     x coordinate
+ * @param       {int} y     y coordinate
+ * @param       {string} color color of checker
+ * @constructor
+ */
 function Checker(x, y, color){
   this.x = x;
   this.y = y;
@@ -14,6 +20,14 @@ function Checker(x, y, color){
   this.alive = 1;
 }
 
+
+/**
+ * Cell of checker board
+ * @param       {int} x     x coordinate
+ * @param       {int} y     y coordinate
+ * @param       {string} color color of cell
+ * @constructor
+ */
 function Cell(x, y, color){
   this.x = x;
   this.y = y;
@@ -21,6 +35,12 @@ function Cell(x, y, color){
   this.hasChecker = 0;
 }
 
+
+/**
+ * Game consisting of checkers and cells
+ * @param {Player} player client info stored in player object
+ * @constructor
+ */
 function Game(player){
   this.checkers = [...Array(BOARDSIZE).keys()].map(i => Array(BOARDSIZE));
   this.cells = [...Array(BOARDSIZE).keys()].map(i => Array(BOARDSIZE));
@@ -28,6 +48,9 @@ function Game(player){
 }
 
 
+/**
+ * Game initialization
+ */
 Game.prototype.initGame = function () {
   this.setupBoard();
   var checkerColor = "grey";
@@ -75,6 +98,9 @@ Game.prototype.initGame = function () {
 };
 
 
+/**
+ * Sets up DOM for checkerboard
+ */
 Game.prototype.setupBoard = function(){
   for(var i = 0; i < BOARDSIZE; i++){
     var row = document.createElement('tr');
@@ -104,6 +130,9 @@ Game.prototype.setupBoard = function(){
 }
 
 
+/**
+ * Renders board to DOM based on the checkers and cells fields of the Game objectS
+ */
 Game.prototype.renderBoard = function(){
   for(var i = 0; i < BOARDSIZE; i++){
     for(var j = 0; j < BOARDSIZE; j++){
@@ -119,6 +148,12 @@ Game.prototype.renderBoard = function(){
 }
 
 
+/**
+ * Renders checker to DOM
+ * @param  {string}  cellID ID for cell that checker is in, formatted for jquery ("#...")
+ * @param  {string}  color  Color of checker
+ * @param  {Boolean} isKing Whether or not the checker is a king
+ */
 Game.prototype.renderChecker = function(cellID, color, isKing){
   var xmlns = "http://www.w3.org/2000/svg";
   var svg = document.createElementNS(xmlns, "svg");
@@ -138,12 +173,22 @@ Game.prototype.renderChecker = function(cellID, color, isKing){
 }
 
 
+/**
+ * Runs game
+ */
 Game.prototype.run = function(){
   $("#loading").text("");
   this.initGame();
 }
 
 
+/**
+ * Diplay the possible moves of selected checker
+ * @param  {string} cellID   Cell ID of checker, formatted for jquery
+ * @param  {int} checkerY Y coordinate of checker
+ * @param  {int} checkerX X coordinate of checker
+ * @param  {Game} game     Game object holding info for this game
+ */
 function displayPossibleMoves(cellID, checkerY, checkerX, game){
   var moves;
   if(game.checkers[checkerY][checkerX]){
@@ -165,38 +210,36 @@ function displayPossibleMoves(cellID, checkerY, checkerX, game){
   }
 }
 
+
+/**
+ * Calculates possible moves and returns them
+ * @param  {int} checkerY Y coordinate of checker
+ * @param  {int} checkerX X coordinate of checker
+ * @param  {Game} game     Game object holding info for this game
+ * @return {[{y: int, x: int}, ...,]}  possibleMoves   Array of "move" objects, {y: int, x: int}
+ */
 function calculatePossibleMoves(checkerY, checkerX, game){
   var possibleMoves = [];
-  var black = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing);
-  var red = (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing);
-  var blackKing = (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && game.checkers[checkerY][checkerX].isKing);
-  var redKing = (game.player == RED && game.checkers[checkerY][checkerX] &&  game.checkers[checkerY][checkerX].color == "red" && game.checkers[checkerY][checkerX].isKing);
 
-  if(black){ //black, not a king
+  if(checkType(checkerY, checkerX, game, "black")){ //black, not a king
     for(var i = -1; i < 2; i+=2){
-      var regularMove = (!game.checkers[checkerY + 1][checkerX + i]  && game.cells[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
-      var skipMove = (!regularMove && checkerY + 2 < BOARDSIZE && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]);
-
-      if(regularMove){
+      if(checkMove(checkerY, checkerX, game, "regularMoveBlack", i)){
         possibleMoves.push({y: checkerY + 1, x: checkerX + i});
-      } else if(skipMove){
+      } else if(checkMove(checkerY, checkerX, game, "skipMoveBlack", i)){
         possibleMoves.push({y: checkerY + 2, x: checkerX + 2*i});
       }
     }
-  } else if(red){ //red, not a king
+  } else if(checkType(checkerY, checkerX, game, "red")){ //red, not a king
     for(var i = -1; i < 2; i+=2){
-      var regularMove = (!game.checkers[checkerY - 1][checkerX + i] && game.cells[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
-      var skipMove = (!regularMove&& checkerY - 2 >= 0 && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i]);
-
-      if(regularMove){
+      if(checkMove(checkerY, checkerX, game, "regularMoveRed", i)){
         possibleMoves.push({y: checkerY - 1, x: checkerX + i});
-      } else if(skipMove){
+      } else if(checkMove(checkerY, checkerX, game, "skipMoveRed", i)){
         possibleMoves.push({y: checkerY - 2, x: checkerX + 2*i});
       }
     }
-  } else if(blackKing){ //black, a king
+  } else if(checkType(checkerY, checkerX, game, "blackKing")){ //black, a king
     possibleMoves = possibleKingMoves(checkerY, checkerX, game, "red");
-  } else if(redKing){ //red, a king
+  } else if(checkType(checkerY, checkerX, game, "redKing")){ //red, a king
     possibleMoves = possibleKingMoves(checkerY, checkerX, game, "black");
   } else{
     if(game.player == BLACK){
@@ -210,6 +253,63 @@ function calculatePossibleMoves(checkerY, checkerX, game){
 }
 
 
+/**
+ * Checks type of checker
+ * @param  {int} checkerY Y coordinate of checker to be moved
+ * @param  {int} checkerX X coordinate of checker to be moved
+ * @param  {Game} game    Game object containing info for this game
+ * @param  {string} type     type of move
+ * @return {boolean}         true if checker is of specified type, false otherwise
+ */
+function checkType(checkerY, checkerX, game, type){
+  switch(type){
+    case "black":
+      return (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && !game.checkers[checkerY][checkerX].isKing);
+    case "red":
+      return (game.player == RED && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "red" && !game.checkers[checkerY][checkerX].isKing);
+    case "blackKing":
+      return (game.player == BLACK && game.checkers[checkerY][checkerX] && game.checkers[checkerY][checkerX].color == "black" && game.checkers[checkerY][checkerX].isKing);
+    case "redKing":
+      return (game.player == RED && game.checkers[checkerY][checkerX] &&  game.checkers[checkerY][checkerX].color == "red" && game.checkers[checkerY][checkerX].isKing);
+    default:
+      return false;
+  }
+}
+
+
+/**
+ * Check move of specified type of checker
+ * @param  {int} checkerY Y coordinate of checker to be moved
+ * @param  {int} checkerX X coordinate of checker to be moved
+ * @param  {Game} game    Game object containing info for this game
+ * @param  {string} type     type of move
+ * @param  {int} i offset of move
+ * @return {boolean}         true if move is viable, false otherwise
+*/
+function checkMove(checkerY, checkerX, game, type, i){
+  switch(type){
+    case "regularMoveBlack":
+      return (!game.checkers[checkerY + 1][checkerX + i]  && game.cells[checkerY + 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+    case "regularMoveRed":
+      return (!game.checkers[checkerY - 1][checkerX + i] && game.cells[checkerY - 1][checkerX + i] && checkerX + i >= 0 && checkerX + i < BOARDSIZE);
+    case "skipMoveBlack":
+      return (!checkMove(checkerY, checkerX, game, "regularMoveBlack", i) && checkerY + 2 < BOARDSIZE && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY + 1][checkerX + i] && game.checkers[checkerY + 1][checkerX + i].color == "red" && !game.checkers[checkerY + 2][checkerX + 2*i]);
+    case "skipMoveRed":
+      return (!checkMove(checkerY, checkerX, game, "regularMoveRed", i) && checkerY - 2 >= 0 && checkerX + 2*i < BOARDSIZE && checkerX + 2*i >= 0 && game.checkers[checkerY - 1][checkerX + i] && game.checkers[checkerY - 1][checkerX + i].color == "black" && !game.checkers[checkerY - 2][checkerX + 2*i]);
+    default:
+      return false;
+  }
+}
+
+
+/**
+ * Helper function for calculatePossibleMoves. Checks possible moves for kings and returns them
+ * @param  {int} checkerY Y coordinate of checker
+ * @param  {int} checkerX X coordinate of checker
+ * @param  {Game} game     Game object holding info for this game
+ * @param {string} color Color of checker
+ * @return {[{y: int, x: int}, ...,]}  possibleMoves   Array of "move" objects, {y: int, x: int}
+ */
 function possibleKingMoves(checkerY, checkerX, game, color){
   var possibleMoves = [];
   for(var i = -1; i < 2; i+=2){
@@ -228,6 +328,14 @@ function possibleKingMoves(checkerY, checkerX, game, color){
   return possibleMoves;
 }
 
+
+/**
+ * Renders the made move. Sends requested move to server
+ * @param  {string} cellID  Cell ID of checker, formatted for jquery
+ * @param  {[{y: int, x: int}, ...,]} moves   Array of Possible Moves
+ * @param  {int} i       Index of made move in moves array
+ * @param  {Checker} checker Checker being moved
+ */
 function makeMove(cellID, moves, i, checker){
   for(var j = 0; j < moves.length; j++){
     $("#row" + moves[j].y + "col" + moves[j].x).css('background-color', "grey");
@@ -238,12 +346,13 @@ function makeMove(cellID, moves, i, checker){
 
 
 
-
-
 //SOCKET REQUESTS (matchmaking)
+/**
+ * Sets up buttons upon ready document
+ */
 $(document).ready(function(){
   $('#create').click(function(){
-    sendGame();
+    createGame();
   });
 
   $('#join').click(function(){
@@ -252,7 +361,10 @@ $(document).ready(function(){
 });
 
 
-function sendGame(){
+/**
+ * If the client has entered a username this function makes the request to make a game through the socket
+ */
+function createGame(){
   if($("#username").val() != ""){
     socket.emit('makeGame', $("#username").val());
   } else{
@@ -261,6 +373,9 @@ function sendGame(){
 }
 
 
+/**
+ * If the client has entered a username this function makes the request to join a game through the socket
+ */
 function joinGame(){
   if($("#username").val() != ""){
     socket.emit('joinGame', $('#username').val());
@@ -269,10 +384,12 @@ function joinGame(){
   }
 };
 
-function leaveGame(){
-  socket.emit('leaveGame');
-};
 
+/**
+ * Checks if there was a win
+ * @param  {Game} game Game object containing information for the game that the win is to be checked on
+ * @return {[type]}      [description]
+ */
 function checkWin(game){
   var blackCount = 0;
   var redCount = 0;
@@ -293,6 +410,10 @@ function checkWin(game){
 }
 
 
+/**
+ * Displays whose turn it is
+ * @param  {int} turn 1 for Black, 2 for Red
+ */
 function printTurn(turn){
   if(thisGame){
     if(turn == thisGame.player){
@@ -304,10 +425,14 @@ function printTurn(turn){
 }
 
 
+/**
+ * Socket protocol for 'gameCreated' response from server
+ * @param  {data} data
+ * @param  {int} turn 1 for Black, 2 for Red
+ */
 socket.on('gameCreated', function (data, turn) {
   console.log("Game Created! ID is: " + data.gameId)
   console.log(data.username + ' created Game: ' + data.gameId);
-  //alert("Game Created! ID is: "+ JSON.stringify(data));
   $("#create").remove();
   $("#join").remove();
   $("#username").remove();
@@ -316,6 +441,12 @@ socket.on('gameCreated', function (data, turn) {
 });
 
 
+/**
+ * Socket protocol for 'joinSuccess' response from server
+ * @param  {string} gameId Game ID
+ * @param  {Player} player Player object containing clients information
+ * @param  {int} turn 1 for Black, 2 for Red
+ */
 socket.on('joinSuccess', function (gameId, player, turn) {
   console.log('Joining the following game: ' + gameId);
   $("#create").remove();
@@ -327,19 +458,30 @@ socket.on('joinSuccess', function (gameId, player, turn) {
 });
 
 
-//Response from Server on existing User found in a game
+/**
+ * Socket protocol for 'aleradyJoined' response from server, simply creates an alert
+ * @param  {string} username Username of client who had already joined
+ */
 socket.on('alreadyJoined', function (username){
   console.log('You are already in an Existing Game ' + username + "!");
   alert("Username is already active, try another");
 });
 
 
-socket.on('leftGame', function (data) {
+/**
+ * Socket protocol for 'leftGame' response from server
+ */
+socket.on('leftGame', function () {
   alert("Opponent left match");
   location.reload();
 });
 
 
+/**
+ * Socket protocol for 'madeMove' response from server upon successful move
+ * @param  {Game} game Updated game state
+ * @param  {int} turn 1 for Black, 2 for Red
+ */
 socket.on('madeMove', function(game, turn){
   $("#game").remove();
   var board = document.createElement('table');
@@ -356,21 +498,35 @@ socket.on('madeMove', function(game, turn){
 });
 
 
+
+/**
+ * Socket protocol for 'waitingForOpponentMove' response from server
+ */
 socket.on('waitingForOpponentMove', function(){
   alert("Not your move, wait for opponent");
 });
 
 
+/**
+ * Socket protocol for 'youWin' response from server, upon a win by this client
+ */
 socket.on('youWin', function(){
   alert("YOU WIN");
 });
 
 
+/**
+ * Socket protocol for 'youLose' response from server, upon a loss by the client
+ * @return {[type]} [description]
+ */
 socket.on('youLose', function(){
   alert("YOU LOST :(");
 });
 
 
+/**
+ * Socket protocol for 'gameOver' response from server, ends game
+ */
 socket.on('gameOver', function(){
   location.reload();
 });
