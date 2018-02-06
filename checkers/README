@@ -1,0 +1,5 @@
+TESTING:
+
+To run the application, type "npm install" into the terminal when in the directory that contains this program. Then, type "npm start". Now, the server should be serving
+out of port 3000. Go to the web browser and open two tabs, each directed to localhost:3000. Next, type in a username and press the "Create Game" button on one and the "Join Game"
+button on the other. Now, both pages will render the checkers match. Here, endless fun can be had playing checkers against yourself or an opponent. Enjoy!
